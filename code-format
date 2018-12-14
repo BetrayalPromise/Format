@@ -1,0 +1,52 @@
+#!/bin/bash
+
+path=`pwd`
+
+touch content.log
+
+for file in `find . -regex ".*\.[h|m|mm]$"`
+do
+  filePath=${file#"."}
+
+  if [ ! -f "$file" ]; then
+    continue
+  fi
+
+  if [[ $filePath =~ "Pods" ]] || [[ $filePath =~ "SYModelUnit" ]] || [[ $filePath =~ ".xcassets" ]] || [[ $filePath =~ ".xcassets" ]] || [[ $filePath =~ ".git" ]] || [[ $filePath =~ "QuanMinTVSupport" ]] || [[ $filePath =~ ".framework" ]]; then
+    echo "----"$path${filePath}
+  else
+    echo "++++"$path${filePath}
+
+    sed -i '' '/.*\/\/.*#.*[include|import].*\..*["|>]$/d' $file
+    sed -i '' '/.*\/\/.*@.*[class|import].*;$/d' $file
+
+    # array=(`ps -ef | grep '.*@class.*;$' $file |awk '{print $2}'`)
+    # echo $array
+    # ps -ef | grep '.*@class.*;$' | awk '{print $2}' | awk -F"\n" -v RS="" '{f=split($0,array,"\n");for (i = 1; i <= f; ++i)print i, array[i]}'
+
+    grep '.*@class.*;$' $file >> content.log
+    grep '.*@import.*;$' $file >> content.log
+
+    sed -i '' '/.*@class.*;$/d' $file
+    sed -i '' '/.*@import.*;$/d' $file
+    # sed -i -e '/.*@.*[class|import].*;$/d' $file
+
+    clang-format -i -style="{BasedOnStyle: LLVM, AccessModifierOffset: 0, AlignConsecutiveAssignments: false, AlignConsecutiveDeclarations: false, AlignTrailingComments: false, AllowShortCaseLabelsOnASingleLine: false, AllowShortFunctionsOnASingleLine: false, AllowShortIfStatementsOnASingleLine: false, ColumnLimit: 250, IndentWidth: 4, KeepEmptyLinesAtTheStartOfBlocks: false, MaxEmptyLinesToKeep: 3, NamespaceIndentation: All, ObjCBlockIndentWidth: 4, ObjCSpaceAfterProperty: true, ObjCSpaceBeforeProtocolList: true, PointerAlignment: Right, SortIncludes: true, SpaceAfterCStyleCast: true, SpaceBeforeParens: ControlStatements, SpaceInEmptyParentheses: false, SpacesInCStyleCastParentheses: false, SpacesInParentheses: false, SpacesInSquareBrackets: false, TabWidth: 4, SpacesInContainerLiterals: true, PenaltyExcessCharacter: 3, IndentCaseLabels: true, AllowShortBlocksOnASingleLine: true, SpaceBeforeAssignmentOperators: true, AllowAllParametersOfDeclarationOnNextLine: false, ReflowComments: true, PenaltyReturnTypeOnItsOwnLine: 0, SortIncludes: true}" $file
+
+    # cat content.log >> $file
+    # sed -i -e '/Copyright/r content.log' $file
+    line=`grep -n '#i.*["|>]$' $file | tail -1 | cut -d ":" -f 1`
+    echo $line
+    total=`expr $line + 1`
+    if [[ $? -eq 0 ]]; then
+        sed -i '' "$line r content.log" $file
+    fi
+
+    # sleep 1
+    # sed -i -e '/Copyright/r content.log' $file
+    # sed -i '' "$line r content.log" $file
+    > content.log
+  fi
+done
+
+rm -f content.log
